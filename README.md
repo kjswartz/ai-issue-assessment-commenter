@@ -93,6 +93,10 @@ jobs:
         uses: kjswartz/ai-issue-assessment-commenter@main # main, tag, or commit sha
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          issue_number: ${{ github.event.issue.number }}
+          issue_body: ${{ github.event.issue.body }}
+          repo_name: ${{ github.event.repository.name  }}
+          owner: ${{ github.repository_owner }}
           ai_review_label: 'request ai review'
           prompts_directory: './Prompts' # Path to the directory from root of repository to where your prompt files are saved.
           labels_to_prompts_mapping: 'bug,bug-review.prompt.yml|support request,request-intake.prompt.yml' # The labels map to the prompt file to use for assessment. If multiple label mappings present on the issue, then the first mapping found will be utilized.
