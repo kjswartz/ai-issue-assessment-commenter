@@ -1,5 +1,5 @@
-name: 'AI Inference'
-description: Generate an AI response based on a provided prompt
+name: 'AI Issue Assessment Commenter'
+description: Generate an AI comment on issues based on a prompt file and labels.
 author: 'GitHub'
 
 inputs:
@@ -16,7 +16,7 @@ inputs:
     description: "A mapping of labels to prompt files, separated by '|'. Format: 'label1,prompt1.prompt.yml|label2,prompt2.prompt.yml'"
     required: true
   model:
-    description: The model to use
+    description: The model to use for AI generation
     required: false
   endpoint:
     description: The endpoint to use
