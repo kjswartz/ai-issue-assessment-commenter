@@ -41,6 +41,8 @@ jobs:
       - name: bun setup
         id: setup-bun
         uses: oven-sh/setup-bun@4bc047ad259df6fc24a6c9b0f9a0cb08cf17fbe5 # v2.0.0
+        with:
+          bun-version-file: ".bun-version"
 
         # Install dependencies using the lock file.
       - name: Install dependencies for the action
