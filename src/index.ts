@@ -11,19 +11,15 @@ import { createIssueComment, addIssueLabels, removeIssueLabel } from "./api";
 import type { Label } from "./types";
 
 const main = async () => {
-  const issueNumber = context?.payload?.issue?.number;
-  const issueBody = context?.payload?.issue?.body;
-
-  if (!issueNumber || !issueBody) {
-    throw new Error(
-      "This action can only be used in the context of an issue with a body.",
-    );
-  }
-
   // Required inputs
   const token = getInput("token") || process.env.GITHUB_TOKEN;
-  const owner = context?.repo?.owner;
-  const repo = context?.repo?.repo;
+  const owner = getInput("owner") || context?.repo?.owner;
+  const repo = getInput("repo_name") || context?.repo?.repo;
+
+  const issueNumber = getInput("issue_number")
+    ? parseInt(getInput("issue_number"), 10)
+    : context?.payload?.issue?.number;
+  const issueBody = getInput("issue_body");
 
   const promptsDirectory = getInput("prompts_directory");
   const aiReviewLabel = getInput("ai_review_label");
@@ -33,6 +29,8 @@ const main = async () => {
     !token ||
     !owner ||
     !repo ||
+    !issueNumber ||
+    !issueBody ||
     !promptsDirectory ||
     !aiReviewLabel ||
     !labelsToPromptsMapping

@@ -31184,18 +31184,15 @@ var removeIssueLabel = async ({
 
 // src/index.ts
 var main = async () => {
-  const issueNumber = import_github.context?.payload?.issue?.number;
-  const issueBody = import_github.context?.payload?.issue?.body;
-  if (!issueNumber || !issueBody) {
-    throw new Error("This action can only be used in the context of an issue with a body.");
-  }
   const token = import_core2.getInput("token") || process.env.GITHUB_TOKEN;
-  const owner = import_github.context?.repo?.owner;
-  const repo = import_github.context?.repo?.repo;
+  const owner = import_core2.getInput("owner") || import_github.context?.repo?.owner;
+  const repo = import_core2.getInput("repo_name") || import_github.context?.repo?.repo;
+  const issueNumber = import_core2.getInput("issue_number") ? parseInt(import_core2.getInput("issue_number"), 10) : import_github.context?.payload?.issue?.number;
+  const issueBody = import_core2.getInput("issue_body");
   const promptsDirectory = import_core2.getInput("prompts_directory");
   const aiReviewLabel = import_core2.getInput("ai_review_label");
   const labelsToPromptsMapping = import_core2.getInput("labels_to_prompts_mapping");
-  if (!token || !owner || !repo || !promptsDirectory || !aiReviewLabel || !labelsToPromptsMapping) {
+  if (!token || !owner || !repo || !issueNumber || !issueBody || !promptsDirectory || !aiReviewLabel || !labelsToPromptsMapping) {
     throw new Error("Required inputs are not set");
   }
   const octokit = import_github.getOctokit(token);

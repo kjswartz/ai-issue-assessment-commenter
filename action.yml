@@ -12,6 +12,12 @@ inputs:
   ai_review_label:
     description: The label applied to the issue to trigger AI review
     required: true
+  issue_number:
+    description: The issue number to comment on
+    required: true
+  issue_body:
+    description: The body of the issue to comment on
+    required: true
   prompts_directory:
     description: The path to the prompts directory
     required: true
@@ -26,6 +32,12 @@ inputs:
     required: false
   max_tokens:
     description: The maximum number of tokens to generate
+    required: false
+  repo_name:
+    description: The name of the repository
+    required: false
+  owner:
+    description: The owner of the repository
     required: false
 runs:
   using: node20
