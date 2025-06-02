@@ -1,6 +1,10 @@
 name: 'AI Issue Assessment Commenter'
 description: Generate an AI comment on issues based on a prompt file and labels.
 
+branding:
+  icon: 'message-square'
+  color: orange
+
 inputs:
   token:
     description: The token to use
