@@ -90,11 +90,11 @@ jobs:
       - name: Run AI assessment for issue labeled
         if: github.event.label.name == 'request ai review' # This is optional to prevent the action from running on every label added event. Assessment will only happen when event == ai_review_label.
         id: ai-assessment-issue-labeled
-        uses: github/ai-issue-assessment-commenter@main
+        uses: kjswartz/ai-issue-assessment-commenter@main # main, tag, or commit sha
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           ai_review_label: 'request ai review'
-          prompts_directory: '.github/prompts' # Path to the directory from root of repository to where your prompt files are saved.
+          prompts_directory: './Prompts' # Path to the directory from root of repository to where your prompt files are saved.
           labels_to_prompts_mapping: 'bug,bug-review.prompt.yml|support request,request-intake.prompt.yml' # The labels map to the prompt file to use for assessment. If multiple label mappings present on the issue, then the first mapping found will be utilized.
 
 ```
