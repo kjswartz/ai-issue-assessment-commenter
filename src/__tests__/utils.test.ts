@@ -2,7 +2,7 @@ import { describe, it, expect } from "bun:test";
 import {
   getPromptOptions,
   getAILabelAssessmentValue,
-  getPromptFileFromLabels,
+  getPromptFilesFromLabels,
 } from "../utils";
 
 describe("getPromptOptions", () => {
@@ -37,87 +37,74 @@ describe("getAILabelAssessmentValue", () => {
   it("should return 'ai:aligned' for aligned assessment", () => {
     const aiResponse =
       "### Alignment Assessment: Aligned\nThe request is fully aligned with the team charter.";
-    expect(getAILabelAssessmentValue(aiResponse)).toEqual("ai:aligned");
+    expect(
+      getAILabelAssessmentValue("intake-prompt.prompt.yml", aiResponse),
+    ).toEqual("ai:intake-prompt:aligned");
   });
 
   it("should return 'ai:not aligned' for not aligned assessment", () => {
     const aiResponse =
       "### Alignment Assessment: Not Aligned\nThe request does not align with the team charter.";
-    expect(getAILabelAssessmentValue(aiResponse)).toEqual("ai:not aligned");
+    expect(
+      getAILabelAssessmentValue("bug-prompt.prompt.yml", aiResponse),
+    ).toEqual("ai:bug-prompt:not aligned");
   });
 
   it("should return 'ai:unsure' if no assessment present", () => {
     const aiResponse =
       "### AI Assessment:\nThe request lacks sufficient information.";
-    expect(getAILabelAssessmentValue(aiResponse)).toEqual("ai:unsure");
+    expect(getAILabelAssessmentValue("bug.prompt.yml", aiResponse)).toEqual(
+      "ai:bug:unsure",
+    );
   });
 });
 
-describe("getPromptFileFromLabels", () => {
+describe("getPromptFilesFromLabels", () => {
   it("should return the request-intake.prompt.yml file for the suport request label", () => {
     const issueLabels = [
       { name: "request ai review" },
       { name: "support request" },
     ];
-    const aiReviewLabel = "request ai review";
     const labelsToPromptsMapping =
       "support request,request-intake.prompt.yml|bug,bug-review.prompt.yml";
 
     expect(
-      getPromptFileFromLabels({
+      getPromptFilesFromLabels({
         issueLabels,
-        aiReviewLabel,
         labelsToPromptsMapping,
       }),
-    ).toEqual("request-intake.prompt.yml");
+    ).toEqual(["request-intake.prompt.yml"]);
   });
 
   it("should return the bug-review.prompt.yml file for the bug label", () => {
     const issueLabels = [{ name: "request ai review" }, { name: "bug" }];
-    const aiReviewLabel = "request ai review";
     const labelsToPromptsMapping =
       "support request,request-intake.prompt.yml|bug,bug-review.prompt.yml";
 
     expect(
-      getPromptFileFromLabels({
+      getPromptFilesFromLabels({
         issueLabels,
-        aiReviewLabel,
         labelsToPromptsMapping,
       }),
-    ).toEqual("bug-review.prompt.yml");
+    ).toEqual(["bug-review.prompt.yml"]);
   });
 
-  it("should return the file for the first label matched to the mapping", () => {
+  it("should return both files for the labels matched to the mapping", () => {
     const issueLabels = [
       { name: "request ai review" },
       { name: "bug" },
       { name: "support request" },
     ];
-    const aiReviewLabel = "request ai review";
     const labelsToPromptsMapping =
       "support request,request-intake.prompt.yml|bug,bug-review.prompt.yml";
 
+    const labels = getPromptFilesFromLabels({
+      issueLabels,
+      labelsToPromptsMapping,
+    });
     expect(
-      getPromptFileFromLabels({
-        issueLabels,
-        aiReviewLabel,
-        labelsToPromptsMapping,
-      }),
-    ).toEqual("request-intake.prompt.yml");
-  });
-
-  it("should return null if aiReviewLabel not in issueLabels", () => {
-    const issueLabels = [{ name: "bug" }];
-    const aiReviewLabel = "request ai review";
-    const labelsToPromptsMapping =
-      "support request,request-intake.prompt.yml|bug,bug-review.prompt.yml";
-
-    expect(
-      getPromptFileFromLabels({
-        issueLabels,
-        aiReviewLabel,
-        labelsToPromptsMapping,
-      }),
-    ).toBeNull();
+      labels.includes("request-intake.prompt.yml") &&
+        labels.includes("bug-review.prompt.yml"),
+    ).toEqual(true);
   });
 });

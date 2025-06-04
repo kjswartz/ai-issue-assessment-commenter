@@ -1,5 +1,5 @@
 import { GitHub } from "@actions/github/lib/utils";
-interface CreateComment {
+interface CreateCommentParams {
   octokit: InstanceType<typeof GitHub>;
   owner: string;
   repo: string;
@@ -7,7 +7,9 @@ interface CreateComment {
   body: string;
 }
 
-interface AddLabels {
+type CreateComment = (params: CreateCommentParams) => Promise<boolean>;
+
+interface AddLabelsParams {
   octokit: InstanceType<typeof GitHub>;
   owner: string;
   repo: string;
@@ -15,7 +17,9 @@ interface AddLabels {
   labels: string[];
 }
 
-interface RemoveLabel {
+type AddLabels = (params: AddLabelsParams) => Promise<void>;
+
+interface RemoveLabelParams {
   octokit: InstanceType<typeof GitHub>;
   owner: string;
   repo: string;
@@ -23,13 +27,24 @@ interface RemoveLabel {
   label: string;
 }
 
-export const createIssueComment = async ({
+type RemoveLabel = (params: RemoveLabelParams) => Promise<void>;
+
+interface GetLabelsParams {
+  octokit: InstanceType<typeof GitHub>;
+  owner: string;
+  repo: string;
+  issueNumber: number;
+}
+
+type GetLabels = (params: GetLabelsParams) => Promise<string[] | undefined>;
+
+export const createIssueComment: CreateComment = async ({
   octokit,
   owner,
   repo,
   issueNumber: issue_number,
   body,
-}: CreateComment): Promise<boolean> => {
+}) => {
   try {
     const response = await octokit.rest.issues.createComment({
       owner,
@@ -50,13 +65,31 @@ export const createIssueComment = async ({
   }
 };
 
-export const addIssueLabels = async ({
+export const getIssueLabels: GetLabels = async ({
+  octokit,
+  owner,
+  repo,
+  issueNumber: issue_number,
+}) => {
+  try {
+    const response = await octokit.rest.issues.listLabelsOnIssue({
+      owner,
+      repo,
+      issue_number,
+    });
+    return response.data.map((label) => label.name);
+  } catch (error) {
+    console.error("Error adding labels to issue:", error);
+  }
+};
+
+export const addIssueLabels: AddLabels = async ({
   octokit,
   owner,
   repo,
   issueNumber: issue_number,
   labels,
-}: AddLabels) => {
+}) => {
   try {
     await octokit.rest.issues.addLabels({ owner, repo, issue_number, labels });
   } catch (error) {
@@ -64,13 +97,13 @@ export const addIssueLabels = async ({
   }
 };
 
-export const removeIssueLabel = async ({
+export const removeIssueLabel: RemoveLabel = async ({
   octokit,
   owner,
   repo,
   issueNumber: issue_number,
   label,
-}: RemoveLabel) => {
+}) => {
   try {
     await octokit.rest.issues.removeLabel({
       owner,

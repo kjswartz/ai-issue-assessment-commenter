@@ -2,12 +2,17 @@ import { context, getOctokit } from "@actions/github";
 import { getInput } from "@actions/core";
 import { run } from "./ai";
 import {
-  getPromptFileFromLabels,
+  getPromptFilesFromLabels,
   getAILabelAssessmentValue,
   writeActionSummary,
   getPromptOptions,
 } from "./utils";
-import { createIssueComment, addIssueLabels, removeIssueLabel } from "./api";
+import {
+  getIssueLabels,
+  createIssueComment,
+  addIssueLabels,
+  removeIssueLabel,
+} from "./api";
 import type { Label } from "./types";
 
 const main = async () => {
@@ -47,69 +52,98 @@ const main = async () => {
     ? parseInt(getInput("max_tokens"), 10)
     : undefined;
 
-  const issueLabels: Label[] = context?.payload?.issue?.labels ?? [];
+  // Get Labels from the issue
+  let issueLabels: Label[] = context?.payload?.issue?.labels ?? [];
+  if (!issueLabels || issueLabels.length === 0) {
+    const labels = await getIssueLabels({
+      octokit,
+      owner,
+      repo,
+      issueNumber,
+    });
+    if (labels) {
+      issueLabels = labels.map((name) => ({ name })) as Label[];
+    } else {
+      console.log("No labels found on the issue.");
+      return;
+    }
+  }
 
-  // Get Prompt file based on issue labels and mapping
-  const promptFile = getPromptFileFromLabels({
-    issueLabels,
-    aiReviewLabel,
-    labelsToPromptsMapping,
-  });
-
-  if (!promptFile) {
-    console.log("No prompt file found.");
+  // Check if the issue requires AI review based on the aiReviewLabel
+  const requireAiReview = issueLabels.some(
+    (label) => label?.name == aiReviewLabel,
+  );
+  if (!requireAiReview) {
+    console.log(
+      `No AI review required. Issue does not have label: ${aiReviewLabel}`,
+    );
     return;
   }
 
-  const promptOptions = getPromptOptions(promptFile, promptsDirectory);
-
-  console.log("Executing AI assessment...");
-  const aiResponse = await run({
-    token,
-    content: issueBody,
-    systemPromptMsg: promptOptions.systemMsg,
-    endpoint: endpoint || promptOptions.endpoint,
-    maxTokens: maxTokens || promptOptions.maxTokens,
-    modelName: modelName || promptOptions.model,
+  // Get Prompt file based on issue labels and mapping
+  const promptFiles = getPromptFilesFromLabels({
+    issueLabels,
+    labelsToPromptsMapping,
   });
-  if (aiResponse) {
-    const commentCreated = await createIssueComment({
-      octokit,
-      owner,
-      repo,
-      issueNumber,
-      body: aiResponse,
+
+  if (promptFiles.length === 0) {
+    console.log("No prompt files found.");
+    return;
+  }
+
+  for (const promptFile of promptFiles) {
+    console.log(`Using prompt file: ${promptFile}`);
+    const promptOptions = getPromptOptions(promptFile, promptsDirectory);
+
+    const aiResponse = await run({
+      token,
+      content: issueBody,
+      systemPromptMsg: promptOptions.systemMsg,
+      endpoint: endpoint || promptOptions.endpoint,
+      maxTokens: maxTokens || promptOptions.maxTokens,
+      modelName: modelName || promptOptions.model,
     });
-    if (!commentCreated) {
-      throw new Error("Failed to create comment");
+    if (aiResponse) {
+      const commentCreated = await createIssueComment({
+        octokit,
+        owner,
+        repo,
+        issueNumber,
+        body: aiResponse,
+      });
+      if (!commentCreated) {
+        throw new Error("Failed to create comment");
+      }
+
+      // Add the assessment label to the issue
+      const assessmentLabel = getAILabelAssessmentValue(promptFile, aiResponse);
+      console.log(`Adding label: ${assessmentLabel}`);
+      await addIssueLabels({
+        octokit,
+        owner,
+        repo,
+        issueNumber,
+        labels: [assessmentLabel],
+      });
+
+      // Remove the aiReviewLabel trigger label
+      console.log(`Removing label: ${aiReviewLabel}`);
+      await removeIssueLabel({
+        octokit,
+        owner,
+        repo,
+        issueNumber,
+        label: aiReviewLabel,
+      });
+
+      writeActionSummary({
+        promptFile,
+        aiResponse,
+        assessmentLabel,
+      });
+    } else {
+      console.log("No response received from AI.");
     }
-
-    // Add the assessment label to the issue
-    const assessmentLabel = getAILabelAssessmentValue(aiResponse);
-    await addIssueLabels({
-      octokit,
-      owner,
-      repo,
-      issueNumber,
-      labels: [assessmentLabel],
-    });
-
-    // Remove the aiReviewLabel trigger label
-    await removeIssueLabel({
-      octokit,
-      owner,
-      repo,
-      issueNumber,
-      label: aiReviewLabel,
-    });
-
-    writeActionSummary({
-      promptFile,
-      aiResponse,
-      assessmentLabel,
-    });
-  } else {
-    console.log("No response received from AI.");
   }
 };
 
