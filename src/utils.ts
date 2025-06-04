@@ -6,7 +6,6 @@ import type { Label, YamlData } from "./types";
 
 interface GetPromptFileFromLabelsParams {
   issueLabels: Label[];
-  aiReviewLabel: string;
   labelsToPromptsMapping: string;
 }
 interface WriteActionSummaryParams {
@@ -45,29 +44,29 @@ export const writeActionSummary = ({
     .write();
 };
 
-export const getAILabelAssessmentValue = (aiResponse: string): string => {
+export const getAILabelAssessmentValue = (
+  promptFile: string,
+  aiResponse: string,
+): string => {
+  const fileName = promptFile.replace(".prompt.yml", "");
   const lines = aiResponse.split("\n");
   const assessmentLine = lines.find((line) => /^###.*Assessment:/.test(line));
 
   if (assessmentLine) {
     const assessment = assessmentLine.split(":")[1].trim().toLowerCase();
-    return assessment ? `ai:${assessment}` : "ai:unsure";
+    return assessment
+      ? `ai:${fileName}:${assessment}`
+      : `ai:${fileName}:unsure`;
   }
 
-  return "ai:unsure";
+  return `ai:${fileName}:unsure`;
 };
 
-export const getPromptFileFromLabels = ({
+export const getPromptFilesFromLabels = ({
   issueLabels,
-  aiReviewLabel,
   labelsToPromptsMapping,
-}: GetPromptFileFromLabelsParams): string | null => {
-  const requireAiReview = issueLabels.some(
-    (label) => label?.name == aiReviewLabel,
-  );
-  if (!requireAiReview) return null;
-
-  let promptFile = null;
+}: GetPromptFileFromLabelsParams): string[] => {
+  const promptFiles = [];
   const labelsToPromptsMappingArr = labelsToPromptsMapping.split("|");
   for (const labelPromptMapping of labelsToPromptsMappingArr) {
     const labelPromptArr = labelPromptMapping.split(",").map((s) => s.trim());
@@ -75,12 +74,11 @@ export const getPromptFileFromLabels = ({
       (label) => label?.name == labelPromptArr[0],
     );
     if (labelMatch) {
-      promptFile = labelPromptArr[1];
-      break;
+      promptFiles.push(labelPromptArr[1]);
     }
   }
 
-  return promptFile;
+  return promptFiles;
 };
 
 export const getPromptOptions: GetPromptOptions = (

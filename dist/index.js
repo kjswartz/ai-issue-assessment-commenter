@@ -31063,35 +31063,31 @@ var writeActionSummary = ({
 }) => {
   import_core.summary.addHeading("Assessment Result").addHeading("Assessment").addCodeBlock(assessmentLabel).addHeading("Prompt File").addCodeBlock(promptFile).addHeading("Details").addCodeBlock(aiResponse).write();
 };
-var getAILabelAssessmentValue = (aiResponse) => {
+var getAILabelAssessmentValue = (promptFile, aiResponse) => {
+  const fileName = promptFile.replace(".prompt.yml", "");
   const lines = aiResponse.split(`
 `);
   const assessmentLine = lines.find((line) => /^###.*Assessment:/.test(line));
   if (assessmentLine) {
     const assessment = assessmentLine.split(":")[1].trim().toLowerCase();
-    return assessment ? `ai:${assessment}` : "ai:unsure";
+    return assessment ? `ai:${fileName}:${assessment}` : `ai:${fileName}:unsure`;
   }
-  return "ai:unsure";
+  return `ai:${fileName}:unsure`;
 };
-var getPromptFileFromLabels = ({
+var getPromptFilesFromLabels = ({
   issueLabels,
-  aiReviewLabel,
   labelsToPromptsMapping
 }) => {
-  const requireAiReview = issueLabels.some((label) => label?.name == aiReviewLabel);
-  if (!requireAiReview)
-    return null;
-  let promptFile = null;
+  const promptFiles = [];
   const labelsToPromptsMappingArr = labelsToPromptsMapping.split("|");
   for (const labelPromptMapping of labelsToPromptsMappingArr) {
     const labelPromptArr = labelPromptMapping.split(",").map((s) => s.trim());
     const labelMatch = issueLabels.some((label) => label?.name == labelPromptArr[0]);
     if (labelMatch) {
-      promptFile = labelPromptArr[1];
-      break;
+      promptFiles.push(labelPromptArr[1]);
     }
   }
-  return promptFile;
+  return promptFiles;
 };
 var getPromptOptions = (promptFile, promptsDirectory) => {
   const fileContents = fs.readFileSync(path.resolve(process.cwd(), promptsDirectory, promptFile), "utf-8");
@@ -31149,6 +31145,23 @@ var createIssueComment = async ({
     return false;
   }
 };
+var getIssueLabels = async ({
+  octokit,
+  owner,
+  repo,
+  issueNumber: issue_number
+}) => {
+  try {
+    const response = await octokit.rest.issues.listLabelsOnIssue({
+      owner,
+      repo,
+      issue_number
+    });
+    return response.data.map((label) => label.name);
+  } catch (error) {
+    console.error("Error listing labels on issue:", error);
+  }
+};
 var addIssueLabels = async ({
   octokit,
   owner,
@@ -31199,59 +31212,81 @@ var main = async () => {
   const endpoint = import_core2.getInput("endpoint");
   const modelName = import_core2.getInput("model");
   const maxTokens = import_core2.getInput("max_tokens") ? parseInt(import_core2.getInput("max_tokens"), 10) : undefined;
-  const issueLabels = import_github.context?.payload?.issue?.labels ?? [];
-  const promptFile = getPromptFileFromLabels({
-    issueLabels,
-    aiReviewLabel,
-    labelsToPromptsMapping
-  });
-  if (!promptFile) {
-    console.log("No prompt file found.");
+  let issueLabels = import_github.context?.payload?.issue?.labels ?? [];
+  if (!issueLabels || issueLabels.length === 0) {
+    const labels = await getIssueLabels({
+      octokit,
+      owner,
+      repo,
+      issueNumber
+    });
+    if (labels) {
+      issueLabels = labels.map((name) => ({ name }));
+    } else {
+      console.log("No labels found on the issue.");
+      return;
+    }
+  }
+  const requireAiReview = issueLabels.some((label) => label?.name == aiReviewLabel);
+  if (!requireAiReview) {
+    console.log(`No AI review required. Issue does not have label: ${aiReviewLabel}`);
     return;
   }
-  const promptOptions = getPromptOptions(promptFile, promptsDirectory);
-  console.log("Executing AI assessment...");
-  const aiResponse = await run({
-    token,
-    content: issueBody,
-    systemPromptMsg: promptOptions.systemMsg,
-    endpoint: endpoint || promptOptions.endpoint,
-    maxTokens: maxTokens || promptOptions.maxTokens,
-    modelName: modelName || promptOptions.model
+  const promptFiles = getPromptFilesFromLabels({
+    issueLabels,
+    labelsToPromptsMapping
   });
-  if (aiResponse) {
-    const commentCreated = await createIssueComment({
-      octokit,
-      owner,
-      repo,
-      issueNumber,
-      body: aiResponse
+  if (promptFiles.length === 0) {
+    console.log("No prompt files found.");
+    return;
+  }
+  for (const promptFile of promptFiles) {
+    console.log(`Using prompt file: ${promptFile}`);
+    const promptOptions = getPromptOptions(promptFile, promptsDirectory);
+    const aiResponse = await run({
+      token,
+      content: issueBody,
+      systemPromptMsg: promptOptions.systemMsg,
+      endpoint: endpoint || promptOptions.endpoint,
+      maxTokens: maxTokens || promptOptions.maxTokens,
+      modelName: modelName || promptOptions.model
     });
-    if (!commentCreated) {
-      throw new Error("Failed to create comment");
+    if (aiResponse) {
+      const commentCreated = await createIssueComment({
+        octokit,
+        owner,
+        repo,
+        issueNumber,
+        body: aiResponse
+      });
+      if (!commentCreated) {
+        throw new Error("Failed to create comment");
+      }
+      const assessmentLabel = getAILabelAssessmentValue(promptFile, aiResponse);
+      console.log(`Adding label: ${assessmentLabel}`);
+      await addIssueLabels({
+        octokit,
+        owner,
+        repo,
+        issueNumber,
+        labels: [assessmentLabel]
+      });
+      console.log(`Removing label: ${aiReviewLabel}`);
+      await removeIssueLabel({
+        octokit,
+        owner,
+        repo,
+        issueNumber,
+        label: aiReviewLabel
+      });
+      writeActionSummary({
+        promptFile,
+        aiResponse,
+        assessmentLabel
+      });
+    } else {
+      console.log("No response received from AI.");
     }
-    const assessmentLabel = getAILabelAssessmentValue(aiResponse);
-    await addIssueLabels({
-      octokit,
-      owner,
-      repo,
-      issueNumber,
-      labels: [assessmentLabel]
-    });
-    await removeIssueLabel({
-      octokit,
-      owner,
-      repo,
-      issueNumber,
-      label: aiReviewLabel
-    });
-    writeActionSummary({
-      promptFile,
-      aiResponse,
-      assessmentLabel
-    });
-  } else {
-    console.log("No response received from AI.");
   }
 };
 if (true) {

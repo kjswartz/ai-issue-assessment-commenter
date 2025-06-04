@@ -26,7 +26,7 @@ bun run build
 ```
 
 ### Description
-This action is responsible for providing an Azure AI comment on issues based on their labels. You assign a `ai_review_label` trigger label in the workflow action file, and a string mapping of labels to prompt files separated by `|`. Format: `label1,prompt1.prompt.yml|label2,prompt2.prompt.yml`. The issue's labels determine which prompt file is used for the AI configuration options (model name, max tokens and system prompt). 
+This action is responsible for providing an Azure AI comment on issues based on their labels. You assign a `ai_review_label` trigger label in the workflow action file, and a string mapping of labels to prompt files separated by `|`. Format: `label1,prompt1.prompt.yml|label2,prompt2.prompt.yml`. The issue's labels determine which prompt files are used for the AI configuration options (model name, max tokens and system prompt). 
 
 Example `.prompt.yml` file:
 ```yaml
@@ -47,7 +47,7 @@ testData: []
 evaluators: []
 ```
 
-An assessment value will be attempted to be extracted from the AI response by trying to find a line matching `/^###.*Assessment:/` (i.e. `### AI Assessment` or `### Alignment Assessment`). If no value is found, then the value `unsure` will be used. The assessment is then downcased and prefixed with `ai:` and added as a label to the issue (i.e. `ai:aligned`, `ai:neutral`, `ai:not aligned`, `ai:ready for review`, `ai:missing details`, `ai:unsure`). The assessment values largely depend on the instructions in the system prompt section. Finally this action will remove the `ai_review_label` trigger label. If you want a new review you can edit your issue body and then re-add the `ai_review_label` trigger label.
+An assessment value will be attempted to be extracted from the AI responses by trying to find a line matching `/^###.*Assessment:/` (i.e. `### AI Assessment` or `### Alignment Assessment`). If no value is found, then the value `unsure` will be used. The assessment is then downcased and prefixed with `ai:` and the `.prompt.yml` file name and added as a label to the issue (i.e. `ai:intake-prompt:aligned`, `ai:intake-prompt:neutral`, `ai:intake-prompt:not aligned`, `ai:intake-prompt:ready for review`, `ai:bug-prompt:missing details`, `ai:bug-prompt:unsure`). The assessment values largely depend on the instructions in the system prompt section. Finally this action will remove the `ai_review_label` trigger label. If you want a new review you can edit your issue body and then re-add the `ai_review_label` trigger label.
 
 ### Inputs
 
@@ -74,7 +74,8 @@ on:
     types:
       - labeled
 jobs:
-  assess:
+  ai-assessment:
+    if: github.event.label.name == 'request ai review' # This is optional to prevent the action from running on every label added event. Assessment will only happen when event == ai_review_label.
     runs-on: ubuntu-latest
     permissions:
       issues: write
@@ -88,7 +89,6 @@ jobs:
         uses: actions/setup-node@v4
 
       - name: Run AI assessment for issue labeled
-        if: github.event.label.name == 'request ai review' # This is optional to prevent the action from running on every label added event. Assessment will only happen when event == ai_review_label.
         id: ai-assessment-issue-labeled
         uses: kjswartz/ai-issue-assessment-commenter@main # main, tag, or commit sha
         with:
@@ -99,6 +99,6 @@ jobs:
           owner: ${{ github.repository_owner }}
           ai_review_label: 'request ai review'
           prompts_directory: './Prompts' # Path to the directory from root of repository to where your prompt files are saved.
-          labels_to_prompts_mapping: 'bug,bug-review.prompt.yml|support request,request-intake.prompt.yml' # The labels map to the prompt file to use for assessment. If multiple label mappings present on the issue, then the first mapping found will be utilized.
+          labels_to_prompts_mapping: 'bug,bug-review.prompt.yml|support request,request-intake.prompt.yml'
 
 ```
