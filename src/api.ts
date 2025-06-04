@@ -79,7 +79,7 @@ export const getIssueLabels: GetLabels = async ({
     });
     return response.data.map((label) => label.name);
   } catch (error) {
-    console.error("Error adding labels to issue:", error);
+    console.error("Error listing labels on issue:", error);
   }
 };
 
