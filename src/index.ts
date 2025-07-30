@@ -29,6 +29,7 @@ const main = async () => {
   const promptsDirectory = getInput("prompts_directory");
   const aiReviewLabel = getInput("ai_review_label");
   const labelsToPromptsMapping = getInput("labels_to_prompts_mapping");
+
   const regexPattern = getInput("assessment_regex_pattern");
   const regexFlags = getInput("assessment_regex_flags");
   let aiAssessmentRegex;
@@ -36,7 +37,7 @@ const main = async () => {
     aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
   } catch (error) {
     throw new Error(
-      `Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error.message}`
+      `Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error}`,
     );
   }
 

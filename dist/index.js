@@ -31209,7 +31209,12 @@ var main = async () => {
   const labelsToPromptsMapping = import_core2.getInput("labels_to_prompts_mapping");
   const regexPattern = import_core2.getInput("assessment_regex_pattern");
   const regexFlags = import_core2.getInput("assessment_regex_flags");
-  const aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
+  let aiAssessmentRegex;
+  try {
+    aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
+  } catch (error) {
+    throw new Error(`Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error}`);
+  }
   if (!token || !owner || !repo || !issueNumber || !issueBody || !promptsDirectory || !aiReviewLabel || !labelsToPromptsMapping) {
     throw new Error("Required inputs are not set");
   }
