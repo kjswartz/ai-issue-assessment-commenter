@@ -40,7 +40,7 @@ inputs:
     description: The owner of the repository
     required: false
   assessment_regex_pattern:
-    description: 'Regex pattern for capturing the assessment line in the AI response used for creating the label to add to the issue. Default: "/^###.*[aA]ssessment:/"'
+    description: 'Regex pattern for capturing the assessment line in the AI response used for creating the label to add to the issue. Default: "^###.*[aA]ssessment:\\s*(.+)$"'
     required: false
     default: '^###.*[aA]ssessment:\\s*(.+)$'
   assessment_regex_flags:
