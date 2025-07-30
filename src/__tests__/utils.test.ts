@@ -34,13 +34,17 @@ describe("getPromptOptions", () => {
 });
 
 describe("getAILabelAssessmentValue", () => {
-  const aiAssessmentRegex = new RegExp('^###.*assessment:\\s*(.+)$', 'i');
+  const aiAssessmentRegex = new RegExp("^###.*assessment:\\s*(.+)$", "i");
 
   it("should return 'ai:aligned' for aligned assessment", () => {
     const aiResponse =
       "### Alignment Assessment: Aligned\nThe request is fully aligned with the team charter.";
     expect(
-      getAILabelAssessmentValue("intake-prompt.prompt.yml", aiResponse, aiAssessmentRegex),
+      getAILabelAssessmentValue(
+        "intake-prompt.prompt.yml",
+        aiResponse,
+        aiAssessmentRegex,
+      ),
     ).toEqual("ai:intake-prompt:aligned");
   });
 
@@ -48,16 +52,24 @@ describe("getAILabelAssessmentValue", () => {
     const aiResponse =
       "### Alignment Assessment: Not Aligned\nThe request does not align with the team charter.";
     expect(
-      getAILabelAssessmentValue("bug-prompt.prompt.yml", aiResponse, aiAssessmentRegex),
+      getAILabelAssessmentValue(
+        "bug-prompt.prompt.yml",
+        aiResponse,
+        aiAssessmentRegex,
+      ),
     ).toEqual("ai:bug-prompt:not aligned");
   });
 
   it("should return 'ai:unsure' if no assessment present", () => {
     const aiResponse =
       "### AI Assessment:\nThe request lacks sufficient information.";
-    expect(getAILabelAssessmentValue("bug.prompt.yml", aiResponse, aiAssessmentRegex)).toEqual(
-      "ai:bug:unsure",
-    );
+    expect(
+      getAILabelAssessmentValue(
+        "bug.prompt.yml",
+        aiResponse,
+        aiAssessmentRegex,
+      ),
+    ).toEqual("ai:bug:unsure");
   });
 });
 
