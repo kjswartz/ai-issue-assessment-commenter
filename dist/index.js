@@ -31071,6 +31071,7 @@ var getAILabelAssessmentValue = (promptFile, aiResponse, assessmentRegex) => {
     const match = line.match(assessmentRegex);
     if (match && match[1]) {
       const assessment = match[1].trim().toLowerCase();
+      console.log(`Assessment found: ${assessment}`);
       return assessment ? `ai:${fileName}:${assessment}` : `ai:${fileName}:unsure`;
     }
   }
@@ -31209,9 +31210,12 @@ var main = async () => {
   const labelsToPromptsMapping = import_core2.getInput("labels_to_prompts_mapping");
   const regexPattern = import_core2.getInput("assessment_regex_pattern");
   const regexFlags = import_core2.getInput("assessment_regex_flags");
+  console.log("Debug: Regex pattern from input:", JSON.stringify(regexPattern));
+  console.log("Debug: Regex flags from input:", JSON.stringify(regexFlags));
   let aiAssessmentRegex;
   try {
     aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
+    console.log("Debug: Constructed regex:", aiAssessmentRegex);
   } catch (error) {
     throw new Error(`Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error}`);
   }

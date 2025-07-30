@@ -56,6 +56,7 @@ export const getAILabelAssessmentValue = (
     const match = line.match(assessmentRegex);
     if (match && match[1]) {
       const assessment = match[1].trim().toLowerCase();
+      console.log(`Assessment found: ${assessment}`);
       return assessment
         ? `ai:${fileName}:${assessment}`
         : `ai:${fileName}:unsure`;

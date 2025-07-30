@@ -32,9 +32,13 @@ const main = async () => {
 
   const regexPattern = getInput("assessment_regex_pattern");
   const regexFlags = getInput("assessment_regex_flags");
+  console.log("Debug: Regex pattern from input:", JSON.stringify(regexPattern));
+  console.log("Debug: Regex flags from input:", JSON.stringify(regexFlags));
+
   let aiAssessmentRegex;
   try {
     aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
+    console.log("Debug: Constructed regex:", aiAssessmentRegex);
   } catch (error) {
     throw new Error(
       `Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error}`,

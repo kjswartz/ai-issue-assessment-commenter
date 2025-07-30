@@ -71,6 +71,26 @@ describe("getAILabelAssessmentValue", () => {
       ),
     ).toEqual("ai:bug:unsure");
   });
+
+  it("should handle 'Alignment Assessment: Neutral' case", () => {
+    const aiResponse =
+      "### Alignment Assessment: Neutral\nFeedback on Strategic Trade-offs:";
+    expect(
+      getAILabelAssessmentValue(
+        "test.prompt.yml",
+        aiResponse,
+        aiAssessmentRegex,
+      ),
+    ).toEqual("ai:test:neutral");
+  });
+
+  it("should work with the default action regex (case-sensitive)", () => {
+    const defaultRegex = new RegExp("^###.*[aA]ssessment:\\s*(.+)$", "");
+    const aiResponse = "### Alignment Assessment: Neutral";
+    expect(
+      getAILabelAssessmentValue("test.prompt.yml", aiResponse, defaultRegex),
+    ).toEqual("ai:test:neutral");
+  });
 });
 
 describe("getPromptFilesFromLabels", () => {
