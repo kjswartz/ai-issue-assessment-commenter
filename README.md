@@ -54,15 +54,21 @@ An assessment value will be attempted to be extracted from the AI responses by t
 Various inputs are defined in [action.yml](action.yml) to let you configure
 the action:
 
-| Name                 | Description                                                                                                                                       | Default                              |
-| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ |
-| `token`              | Token to use for inference. Typically the GITHUB_TOKEN secret                                                                                     | `github.token`                       |
-| `ai_review_label`             | The label applied to the issue to trigger AI review                                                                                                                   | N/A                                  |
-| `prompts_directory`        | The path to the directory where the `.prompt.yml` files are located                             | N/A                                 |
-| `labels_to_prompts_mapping`      | A mapping of labels to prompt files, separated by `\|`. Format: `label1,prompt1.prompt.yml\|label2,prompt2.prompt.yml`                                                                                                            | N/A      |
-| `model`              | The model to use for inference. Must be available in the [GitHub Models](https://github.com/marketplace?type=models) catalog. Format: `{publisher}/{model_name}`                      | `openai/gpt-4o-mini`                             |
-| `endpoint`           | The endpoint to use for inference. If you're running this as part of an org, you should probably use the org-specific Models endpoint             | `https://models.github.ai/inference` |
-| `max_tokens`         | The max number of tokens to generate                                                                                                              | 200                                  |
+| Name |Description | Required | Default |
+| :-- | :-- | :-- | --: |
+| `token` | Token to use for inference. Typically the GITHUB_TOKEN secret | true | `github.token` |
+| `ai_review_label` | The label applied to the issue to trigger AI review | true | |
+| `issue_number` | The issue number to comment on | true | |
+| `issue_body` | The issue body to use for AI prompt | true | |
+| `prompts_directory` | The path to the directory where the `.prompt.yml` files are located | true | |
+| `labels_to_prompts_mapping` | A mapping of labels to prompt files, separated by `\|`. Format: `label1,prompt1.prompt.yml\|label2,prompt2.prompt.yml`| true | |
+| `model` | The model to use for inference. Must be available in the [GitHub Models](https://github.com/marketplace?type=models) catalog. Format: `{publisher}/{model_name}` | false | `openai/gpt-4o-mini` |
+| `endpoint` | The endpoint to use for inference. If you're running this as part of an org, you should probably use the org-specific Models endpoint | false | `https://models.github.ai/inference` |
+| `max_tokens` | The max number of tokens to generate | false | 200 |
+| `repo_name` | The name of the repository | false | |
+| `owner` | The name of the repository owner | false | |
+| `assessment_regex_pattern` | Regex pattern for capturing the assessment line in the AI response used for creating the label to add to the issue. | false | "^###.*[aA]ssessment:\s*(.+)$" |
+| `assessment_regex_flags` | Regex flags for the assessment regex pattern. e.g.: "i" for case-insensitive matching. | false | "" |
 
 ### Example Workflow Setup
 Below is an example workflow action file you can setup for this action. This setup would trigger everytime an issue had a label assigned to it. You can configure your issue templates to assign default labels on creation that then map to specific `.prompt.yml` files you have saved in your repository. So when users open a `bug` issue that is created with the labels `bug` and `request ai review`. In the example below  `ai_review_label` is set to `request ai review`, which means every time `request ai review` label is added to an issue this action will run. Since we are mapping `bug` to `bug-review.prompt.yml` in the `labels_to_prompts_mapping` field, this action will use the `bug-review.prompt.yml` file to pull the `system prompt` to use and the `model` and `max_tokens` options. If you want to override the `model` and `max_token` options that are in your `.prompt.yml` file you can pass those into the workflow action below as `model` and `max_tokens` variables.
