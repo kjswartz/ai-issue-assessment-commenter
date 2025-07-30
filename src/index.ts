@@ -31,7 +31,14 @@ const main = async () => {
   const labelsToPromptsMapping = getInput("labels_to_prompts_mapping");
   const regexPattern = getInput("assessment_regex_pattern");
   const regexFlags = getInput("assessment_regex_flags");
-  const aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
+  let aiAssessmentRegex;
+  try {
+    aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
+  } catch (error) {
+    throw new Error(
+      `Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error.message}`
+    );
+  }
 
   if (
     !token ||
