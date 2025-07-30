@@ -31063,14 +31063,16 @@ var writeActionSummary = ({
 }) => {
   import_core.summary.addHeading("Assessment Result").addHeading("Assessment").addCodeBlock(assessmentLabel).addHeading("Prompt File").addCodeBlock(promptFile).addHeading("Details").addCodeBlock(aiResponse).write();
 };
-var getAILabelAssessmentValue = (promptFile, aiResponse) => {
+var getAILabelAssessmentValue = (promptFile, aiResponse, assessmentRegex) => {
   const fileName = promptFile.replace(".prompt.yml", "");
   const lines = aiResponse.split(`
 `);
-  const assessmentLine = lines.find((line) => /^###.*Assessment:/.test(line));
-  if (assessmentLine) {
-    const assessment = assessmentLine.split(":")[1].trim().toLowerCase();
-    return assessment ? `ai:${fileName}:${assessment}` : `ai:${fileName}:unsure`;
+  for (const line of lines) {
+    const match = line.match(assessmentRegex);
+    if (match && match[1]) {
+      const assessment = match[1].trim().toLowerCase();
+      return assessment ? `ai:${fileName}:${assessment}` : `ai:${fileName}:unsure`;
+    }
   }
   return `ai:${fileName}:unsure`;
 };
@@ -31205,6 +31207,14 @@ var main = async () => {
   const promptsDirectory = import_core2.getInput("prompts_directory");
   const aiReviewLabel = import_core2.getInput("ai_review_label");
   const labelsToPromptsMapping = import_core2.getInput("labels_to_prompts_mapping");
+  const regexPattern = import_core2.getInput("assessment_regex_pattern");
+  const regexFlags = import_core2.getInput("assessment_regex_flags");
+  let aiAssessmentRegex;
+  try {
+    aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
+  } catch (error) {
+    throw new Error(`Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error}`);
+  }
   if (!token || !owner || !repo || !issueNumber || !issueBody || !promptsDirectory || !aiReviewLabel || !labelsToPromptsMapping) {
     throw new Error("Required inputs are not set");
   }
@@ -31232,6 +31242,14 @@ var main = async () => {
     console.log(`No AI review required. Issue does not have label: ${aiReviewLabel}`);
     return;
   }
+  console.log(`Removing label: ${aiReviewLabel}`);
+  await removeIssueLabel({
+    octokit,
+    owner,
+    repo,
+    issueNumber,
+    label: aiReviewLabel
+  });
   const promptFiles = getPromptFilesFromLabels({
     issueLabels,
     labelsToPromptsMapping
@@ -31240,6 +31258,7 @@ var main = async () => {
     console.log("No prompt files found.");
     return;
   }
+  const labelsToAdd = [];
   for (const promptFile of promptFiles) {
     console.log(`Using prompt file: ${promptFile}`);
     const promptOptions = getPromptOptions(promptFile, promptsDirectory);
@@ -31262,23 +31281,8 @@ var main = async () => {
       if (!commentCreated) {
         throw new Error("Failed to create comment");
       }
-      const assessmentLabel = getAILabelAssessmentValue(promptFile, aiResponse);
-      console.log(`Adding label: ${assessmentLabel}`);
-      await addIssueLabels({
-        octokit,
-        owner,
-        repo,
-        issueNumber,
-        labels: [assessmentLabel]
-      });
-      console.log(`Removing label: ${aiReviewLabel}`);
-      await removeIssueLabel({
-        octokit,
-        owner,
-        repo,
-        issueNumber,
-        label: aiReviewLabel
-      });
+      const assessmentLabel = getAILabelAssessmentValue(promptFile, aiResponse, aiAssessmentRegex);
+      labelsToAdd.push(assessmentLabel);
       writeActionSummary({
         promptFile,
         aiResponse,
@@ -31287,6 +31291,18 @@ var main = async () => {
     } else {
       console.log("No response received from AI.");
     }
+  }
+  if (labelsToAdd.length > 0) {
+    console.log(`Adding labels: ${labelsToAdd.join(", ")}`);
+    await addIssueLabels({
+      octokit,
+      owner,
+      repo,
+      issueNumber,
+      labels: labelsToAdd
+    });
+  } else {
+    console.log("No labels to add found.");
   }
 };
 if (true) {
