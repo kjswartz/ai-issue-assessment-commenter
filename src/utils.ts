@@ -51,19 +51,20 @@ export const getAILabelAssessmentValue = (
 ): string => {
   const fileName = promptFile.replace(".prompt.yml", "");
   const lines = aiResponse.split("\n");
+  let assessment = `ai:${fileName}:unsure`;
 
   for (const line of lines) {
     const match = line.match(assessmentRegex);
     if (match && match[1]) {
-      const assessment = match[1].trim().toLowerCase();
-      console.log(`Assessment found: ${assessment}`);
-      return assessment
-        ? `ai:${fileName}:${assessment}`
-        : `ai:${fileName}:unsure`;
+      const matchedAssessment = match[1].trim().toLowerCase();
+      console.log(`Assessment found: ${matchedAssessment}`);
+      if (matchedAssessment) {
+        assessment = `ai:${fileName}:${matchedAssessment}`;
+      }
     }
   }
-
-  return `ai:${fileName}:unsure`;
+  // Max 50 characters for labels
+  return assessment.slice(0, 50);
 };
 
 export const getPromptFilesFromLabels = ({
