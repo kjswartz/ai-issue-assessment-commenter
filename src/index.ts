@@ -29,6 +29,9 @@ const main = async () => {
   const promptsDirectory = getInput("prompts_directory");
   const aiReviewLabel = getInput("ai_review_label");
   const labelsToPromptsMapping = getInput("labels_to_prompts_mapping");
+  const regexPattern = getInput("assessment_regex_pattern");
+  const regexFlags = getInput("assessment_regex_flags");
+  const aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
 
   if (
     !token ||
@@ -80,6 +83,16 @@ const main = async () => {
     return;
   }
 
+  // Remove the aiReviewLabel trigger label
+  console.log(`Removing label: ${aiReviewLabel}`);
+  await removeIssueLabel({
+    octokit,
+    owner,
+    repo,
+    issueNumber,
+    label: aiReviewLabel,
+  });
+
   // Get Prompt file based on issue labels and mapping
   const promptFiles = getPromptFilesFromLabels({
     issueLabels,
@@ -91,6 +104,7 @@ const main = async () => {
     return;
   }
 
+  const labelsToAdd: string[] = [];
   for (const promptFile of promptFiles) {
     console.log(`Using prompt file: ${promptFile}`);
     const promptOptions = getPromptOptions(promptFile, promptsDirectory);
@@ -116,25 +130,12 @@ const main = async () => {
       }
 
       // Add the assessment label to the issue
-      const assessmentLabel = getAILabelAssessmentValue(promptFile, aiResponse);
-      console.log(`Adding label: ${assessmentLabel}`);
-      await addIssueLabels({
-        octokit,
-        owner,
-        repo,
-        issueNumber,
-        labels: [assessmentLabel],
-      });
-
-      // Remove the aiReviewLabel trigger label
-      console.log(`Removing label: ${aiReviewLabel}`);
-      await removeIssueLabel({
-        octokit,
-        owner,
-        repo,
-        issueNumber,
-        label: aiReviewLabel,
-      });
+      const assessmentLabel = getAILabelAssessmentValue(
+        promptFile,
+        aiResponse,
+        aiAssessmentRegex,
+      );
+      labelsToAdd.push(assessmentLabel);
 
       writeActionSummary({
         promptFile,
@@ -144,6 +145,19 @@ const main = async () => {
     } else {
       console.log("No response received from AI.");
     }
+  }
+
+  if (labelsToAdd.length > 0) {
+    console.log(`Adding labels: ${labelsToAdd.join(", ")}`);
+    await addIssueLabels({
+      octokit,
+      owner,
+      repo,
+      issueNumber,
+      labels: labelsToAdd,
+    });
+  } else {
+    console.log("No labels to add found.");
   }
 };
 

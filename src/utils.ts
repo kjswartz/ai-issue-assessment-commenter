@@ -47,16 +47,19 @@ export const writeActionSummary = ({
 export const getAILabelAssessmentValue = (
   promptFile: string,
   aiResponse: string,
+  assessmentRegex: RegExp,
 ): string => {
   const fileName = promptFile.replace(".prompt.yml", "");
   const lines = aiResponse.split("\n");
-  const assessmentLine = lines.find((line) => /^###.*Assessment:/.test(line));
 
-  if (assessmentLine) {
-    const assessment = assessmentLine.split(":")[1].trim().toLowerCase();
-    return assessment
-      ? `ai:${fileName}:${assessment}`
-      : `ai:${fileName}:unsure`;
+  for (const line of lines) {
+    const match = line.match(assessmentRegex);
+    if (match && match[1]) {
+      const assessment = match[1].trim().toLowerCase();
+      return assessment
+        ? `ai:${fileName}:${assessment}`
+        : `ai:${fileName}:unsure`;
+    }
   }
 
   return `ai:${fileName}:unsure`;
