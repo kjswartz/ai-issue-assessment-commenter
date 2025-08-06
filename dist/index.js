@@ -31056,6 +31056,16 @@ var js_yaml_default = jsYaml;
 var MAX_TOKENS = 200;
 var AI_MODEL = "openai/gpt-4o-mini";
 var ENDPOINT = "https://models.github.ai/inference";
+var getRegexFromString = (regexString, regexFlags) => {
+  let regex;
+  try {
+    regex = new RegExp(regexString, regexFlags);
+    console.log("Debug: Constructed regex:", regex);
+  } catch (error) {
+    throw new Error(`Invalid regex pattern or flags provided: pattern="${regexString}", flags="${regexFlags}". Error: ${error}`);
+  }
+  return regex;
+};
 var writeActionSummary = ({
   promptFile,
   aiResponse,
@@ -31211,17 +31221,12 @@ var main = async () => {
   const promptsDirectory = import_core2.getInput("prompts_directory");
   const aiReviewLabel = import_core2.getInput("ai_review_label");
   const labelsToPromptsMapping = import_core2.getInput("labels_to_prompts_mapping");
-  const regexPattern = import_core2.getInput("assessment_regex_pattern");
-  const regexFlags = import_core2.getInput("assessment_regex_flags");
-  console.log("Debug: Regex pattern from input:", JSON.stringify(regexPattern));
-  console.log("Debug: Regex flags from input:", JSON.stringify(regexFlags));
-  let aiAssessmentRegex;
-  try {
-    aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
-    console.log("Debug: Constructed regex:", aiAssessmentRegex);
-  } catch (error) {
-    throw new Error(`Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error}`);
-  }
+  const assessmentRegexPattern = import_core2.getInput("assessment_regex_pattern");
+  const assessmentRegexFlags = import_core2.getInput("assessment_regex_flags");
+  const noCommentRegexPattern = import_core2.getInput("no_comment_regex_pattern");
+  const noCommentRegexFlags = import_core2.getInput("no_comment_regex_flags");
+  const aiAssessmentRegex = getRegexFromString(assessmentRegexPattern, assessmentRegexFlags);
+  const noCommentRegex = noCommentRegexPattern ? getRegexFromString(noCommentRegexPattern, noCommentRegexFlags) : null;
   if (!token || !owner || !repo || !issueNumber || !issueBody || !promptsDirectory || !aiReviewLabel || !labelsToPromptsMapping) {
     throw new Error("Required inputs are not set");
   }
@@ -31278,15 +31283,19 @@ var main = async () => {
       modelName: modelName || promptOptions.model
     });
     if (aiResponse) {
-      const commentCreated = await createIssueComment({
-        octokit,
-        owner,
-        repo,
-        issueNumber,
-        body: aiResponse
-      });
-      if (!commentCreated) {
-        throw new Error("Failed to create comment");
+      if (noCommentRegex && noCommentRegex.test(aiResponse)) {
+        console.log("No comment creation as per AI response directive.");
+      } else {
+        const commentCreated = await createIssueComment({
+          octokit,
+          owner,
+          repo,
+          issueNumber,
+          body: aiResponse
+        });
+        if (!commentCreated) {
+          throw new Error("Failed to create comment");
+        }
       }
       const assessmentLabel = getAILabelAssessmentValue(promptFile, aiResponse, aiAssessmentRegex);
       labelsToAdd.push(assessmentLabel);

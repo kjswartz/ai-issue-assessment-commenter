@@ -49,6 +49,8 @@ evaluators: []
 
 An assessment value will be attempted to be extracted from the AI responses by trying to find a line matching `/^###.*Assessment:/` (i.e. `### AI Assessment` or `### Alignment Assessment`). If no value is found, then the value `unsure` will be used. The assessment is then downcased and prefixed with `ai:` and the `.prompt.yml` file name and added as a label to the issue (i.e. `ai:intake-prompt:aligned`, `ai:intake-prompt:neutral`, `ai:intake-prompt:not aligned`, `ai:intake-prompt:ready for review`, `ai:bug-prompt:missing details`, `ai:bug-prompt:unsure`). The assessment values largely depend on the instructions in the system prompt section. Finally this action will remove the `ai_review_label` trigger label. If you want a new review you can edit your issue body and then re-add the `ai_review_label` trigger label.
 
+If you want to just have the ai assessment label added to the issue and suppress the creation of the comment, then you can use the `no_comment_regex_pattern` variable. The way this works is you update your system prompt to add a "no comment" identifier in the response e.g. "If the assessment is in the affirmative then add `<!-- no-comment -->` to the response body."  You can then set `no_comment_regex_pattern: '<!--.*no.*comment.*-->'` and `no_comment_regex_flags: gmi`. If the regex is found in the response then the comment creation step is skipped and the issue will still be labeled with the identified assessment. The ai assessment will still be added the action output summary so it can be viewed.
+
 ### Inputs
 
 Various inputs are defined in [action.yml](action.yml) to let you configure
@@ -69,6 +71,8 @@ the action:
 | `owner` | The name of the repository owner | false | |
 | `assessment_regex_pattern` | Regex pattern for capturing the assessment line in the AI response used for creating the label to add to the issue. | false | "^###.*[aA]ssessment:\s*(.+)$" |
 | `assessment_regex_flags` | Regex flags for the assessment regex pattern. e.g.: "i" for case-insensitive matching. | false | "" |
+| `no_comment_regex_pattern` | Regex pattern for capturing the no comment directive in the AI response. e.g.: "<!--.*no.*comment.*-->" | false | "" |
+| `no_comment_regex_flags` | Regex flags for the no comment regex pattern. e.g.: "i" for case-insensitive matching. | false | "" |
 
 ### Example Workflow Setup
 Below is an example workflow action file you can setup for this action. This setup would trigger everytime an issue had a label assigned to it. You can configure your issue templates to assign default labels on creation that then map to specific `.prompt.yml` files you have saved in your repository. So when users open a `bug` issue that is created with the labels `bug` and `request ai review`. In the example below  `ai_review_label` is set to `request ai review`, which means every time `request ai review` label is added to an issue this action will run. Since we are mapping `bug` to `bug-review.prompt.yml` in the `labels_to_prompts_mapping` field, this action will use the `bug-review.prompt.yml` file to pull the `system prompt` to use and the `model` and `max_tokens` options. If you want to override the `model` and `max_token` options that are in your `.prompt.yml` file you can pass those into the workflow action below as `model` and `max_tokens` variables.

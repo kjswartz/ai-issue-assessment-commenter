@@ -28,6 +28,22 @@ const MAX_TOKENS = 200;
 const AI_MODEL = "openai/gpt-4o-mini";
 const ENDPOINT = "https://models.github.ai/inference";
 
+export const getRegexFromString = (
+  regexString: string,
+  regexFlags: string,
+): RegExp => {
+  let regex;
+  try {
+    regex = new RegExp(regexString, regexFlags);
+    console.log("Debug: Constructed regex:", regex);
+  } catch (error) {
+    throw new Error(
+      `Invalid regex pattern or flags provided: pattern="${regexString}", flags="${regexFlags}". Error: ${error}`,
+    );
+  }
+  return regex;
+};
+
 export const writeActionSummary = ({
   promptFile,
   aiResponse,

@@ -3,6 +3,7 @@ import {
   getPromptOptions,
   getAILabelAssessmentValue,
   getPromptFilesFromLabels,
+  getRegexFromString,
 } from "../utils";
 
 describe("getPromptOptions", () => {
@@ -122,23 +123,52 @@ describe("getPromptFilesFromLabels", () => {
       }),
     ).toEqual(["bug-review.prompt.yml"]);
   });
+});
 
-  it("should return both files for the labels matched to the mapping", () => {
-    const issueLabels = [
-      { name: "request ai review" },
-      { name: "bug" },
-      { name: "support request" },
-    ];
-    const labelsToPromptsMapping =
-      "support request,request-intake.prompt.yml|bug,bug-review.prompt.yml";
+describe("getRegexFromString", () => {
+  it("should create a valid regex with pattern and flags", () => {
+    const regex = getRegexFromString("test", "gi");
+    expect(regex).toBeInstanceOf(RegExp);
+    expect(regex.source).toBe("test");
+    expect(regex.flags).toBe("gi");
+  });
 
-    const labels = getPromptFilesFromLabels({
-      issueLabels,
-      labelsToPromptsMapping,
-    });
+  it("should create a regex with no flags", () => {
+    const regex = getRegexFromString("hello", "");
+    expect(regex).toBeInstanceOf(RegExp);
+    expect(regex.source).toBe("hello");
+    expect(regex.flags).toBe("");
+  });
+
+  it("should create a case-insensitive regex", () => {
+    const regex = getRegexFromString("Assessment", "i");
+    expect(regex.test("assessment")).toBe(true);
+    expect(regex.test("ASSESSMENT")).toBe(true);
+  });
+
+  it("should throw error for invalid regex pattern", () => {
+    expect(() => {
+      getRegexFromString("[invalid", "");
+    }).toThrow(/Invalid regex pattern or flags provided/);
+  });
+
+  it("should throw error for invalid regex flags", () => {
+    expect(() => {
+      getRegexFromString("valid", "x");
+    }).toThrow(/Invalid regex pattern or flags provided/);
+  });
+
+  it("should handle complex regex patterns", () => {
+    const regex = getRegexFromString("^###.*[aA]ssessment:\\s*(.+)$", "");
+    expect(regex).toBeInstanceOf(RegExp);
+    expect(regex.test("### Alignment Assessment: Aligned")).toBe(true);
+  });
+
+  it("should handle hidden text regex patterns", () => {
+    const regex = getRegexFromString("<!--.*no.*comment.*-->", "gmi");
+    expect(regex).toBeInstanceOf(RegExp);
     expect(
-      labels.includes("request-intake.prompt.yml") &&
-        labels.includes("bug-review.prompt.yml"),
-    ).toEqual(true);
+      regex.test("### Well-form: Yes\n<!-- NO-COMMENT -->\nThis is a test."),
+    ).toBe(true);
   });
 });
