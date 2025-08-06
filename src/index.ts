@@ -37,8 +37,13 @@ const main = async () => {
   const noCommentRegexPattern = getInput("no_comment_regex_pattern");
   const noCommentRegexFlags = getInput("no_comment_regex_flags");
 
-  const aiAssessmentRegex = getRegexFromString(assessmentRegexPattern, assessmentRegexFlags);
-  const noCommentRegex = noCommentRegexPattern ? getRegexFromString(noCommentRegexPattern, noCommentRegexFlags) : null;
+  const aiAssessmentRegex = getRegexFromString(
+    assessmentRegexPattern,
+    assessmentRegexFlags,
+  );
+  const noCommentRegex = noCommentRegexPattern
+    ? getRegexFromString(noCommentRegexPattern, noCommentRegexFlags)
+    : null;
 
   if (
     !token ||

@@ -28,7 +28,10 @@ const MAX_TOKENS = 200;
 const AI_MODEL = "openai/gpt-4o-mini";
 const ENDPOINT = "https://models.github.ai/inference";
 
-export const getRegexFromString = (regexString: string, regexFlags: string): RegExp => {
+export const getRegexFromString = (
+  regexString: string,
+  regexFlags: string,
+): RegExp => {
   let regex;
   try {
     regex = new RegExp(regexString, regexFlags);
