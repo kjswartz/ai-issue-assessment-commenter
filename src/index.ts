@@ -6,6 +6,7 @@ import {
   getAILabelAssessmentValue,
   writeActionSummary,
   getPromptOptions,
+  getRegexFromString,
 } from "./utils";
 import {
   getIssueLabels,
@@ -30,20 +31,14 @@ const main = async () => {
   const aiReviewLabel = getInput("ai_review_label");
   const labelsToPromptsMapping = getInput("labels_to_prompts_mapping");
 
-  const regexPattern = getInput("assessment_regex_pattern");
-  const regexFlags = getInput("assessment_regex_flags");
-  console.log("Debug: Regex pattern from input:", JSON.stringify(regexPattern));
-  console.log("Debug: Regex flags from input:", JSON.stringify(regexFlags));
+  const assessmentRegexPattern = getInput("assessment_regex_pattern");
+  const assessmentRegexFlags = getInput("assessment_regex_flags");
 
-  let aiAssessmentRegex;
-  try {
-    aiAssessmentRegex = new RegExp(regexPattern, regexFlags);
-    console.log("Debug: Constructed regex:", aiAssessmentRegex);
-  } catch (error) {
-    throw new Error(
-      `Invalid regex pattern or flags provided: pattern="${regexPattern}", flags="${regexFlags}". Error: ${error}`,
-    );
-  }
+  const noCommentRegexPattern = getInput("no_comment_regex_pattern");
+  const noCommentRegexFlags = getInput("no_comment_regex_flags");
+
+  const aiAssessmentRegex = getRegexFromString(assessmentRegexPattern, assessmentRegexFlags);
+  const noCommentRegex = noCommentRegexPattern ? getRegexFromString(noCommentRegexPattern, noCommentRegexFlags) : null;
 
   if (
     !token ||
@@ -130,15 +125,20 @@ const main = async () => {
       modelName: modelName || promptOptions.model,
     });
     if (aiResponse) {
-      const commentCreated = await createIssueComment({
-        octokit,
-        owner,
-        repo,
-        issueNumber,
-        body: aiResponse,
-      });
-      if (!commentCreated) {
-        throw new Error("Failed to create comment");
+      // TODO add variable to action to control regex for assessment
+      if (noCommentRegex && noCommentRegex.test(aiResponse)) {
+        console.log("No comment creation as per AI response directive.");
+      } else {
+        const commentCreated = await createIssueComment({
+          octokit,
+          owner,
+          repo,
+          issueNumber,
+          body: aiResponse,
+        });
+        if (!commentCreated) {
+          throw new Error("Failed to create comment");
+        }
       }
 
       // Add the assessment label to the issue

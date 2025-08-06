@@ -47,6 +47,14 @@ inputs:
     description: 'Regex flags for the assessment regex pattern. e.g.: "i" for case-insensitive matching.'
     required: false
     default: ''
+  no_comment_regex_pattern:
+    description: 'Regex pattern for capturing the no comment directive in the AI response. e.g.: "<!--.*no.*comment.*-->"'
+    required: false
+    default: ''
+  no_comment_regex_flags:
+    description: 'Regex flags for the no comment regex pattern. e.g.: "i" for case-insensitive matching.'
+    required: false
+    default: ''
 runs:
   using: node20
   main: dist/index.js
