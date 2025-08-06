@@ -130,7 +130,6 @@ const main = async () => {
       modelName: modelName || promptOptions.model,
     });
     if (aiResponse) {
-      // TODO add variable to action to control regex for assessment
       if (noCommentRegex && noCommentRegex.test(aiResponse)) {
         console.log("No comment creation as per AI response directive.");
       } else {
