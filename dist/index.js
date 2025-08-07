@@ -31283,6 +31283,9 @@ var main = async () => {
       modelName: modelName || promptOptions.model
     });
     if (aiResponse) {
+      console.log(`AI Response: ${aiResponse}`);
+      console.log(`No comment regex pattern: ${noCommentRegex}`);
+      console.log(`No comment Regex test: ${noCommentRegex?.test(aiResponse)}`);
       if (noCommentRegex && noCommentRegex.test(aiResponse)) {
         console.log("No comment creation as per AI response directive.");
       } else {
